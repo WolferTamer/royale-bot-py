@@ -7,6 +7,39 @@ from schemas import Game, User
 
 
 class GamesCog(commands.Cog):
+    help_index = [
+        {"name":"Create Game",
+         "command":"/create_game <name> [teamtype] [teams] [autoprogress]",
+         "parameters": [
+            {"name":"Name",
+             "type":"String",
+             "usage":"The you want your game to have."},
+             {"name":"Team Type",
+             "type":"district | team | solo",
+             "usage":"What type of team you want to have."},
+             {"name":"Teams",
+             "type":"Integer",
+             "usage":"The amount of teams in your game."},
+             {"name":"Auto Progress",
+             "type":"Yes/No",
+             "usage":"Whether the game should progress automatically when started."}
+         ],
+         "description":"Create a game"},
+         {"name":"games",
+         "command":"/games",
+         "parameters": [
+         ],
+         "description":"View a list of your games and their IDs"},
+         {"name":"Game",
+         "command":"/game <id>",
+         "parameters": [
+            {"name":"Game ID",
+             "type":"Integer",
+             "usage":"The id of the game you want to view"}
+         ],
+         "description":"View information about one of your games"}
+    ]
+
     teamtypedescriptions = {
         "district": "Each player starts on a team that they may be more inclined to cooperate with, but there will only be one winner.",
         "team": "Each player starts on a team, and everyone on that team is able to win together. They will not harm team members.",
@@ -37,6 +70,8 @@ class GamesCog(commands.Cog):
 
         await ctx.send(embed=self.gameEmbed(game))
 
+        await session.close()
+
         return
     
     @commands.hybrid_command()
@@ -52,7 +87,7 @@ class GamesCog(commands.Cog):
         else:
             userInstance = userInstance[0]
         games = await session.execute(select(Game).where(Game.userid == userid))
-
+        await session.close()
         result = [r for r, in games]
         
         if len(result) > 0:
@@ -61,6 +96,21 @@ class GamesCog(commands.Cog):
             return
         else:
             await ctx.send("No games found")
+
+    @commands.hybrid_command()
+    async def game(self, ctx: commands.Context, id:int):
+        statement = select(Game).where(Game.userid==ctx.author.id,Game.gameid==id)
+        session : AsyncSession = self.bot.session
+        response = (await session.execute(statement)).first()
+        await session.close()
+        if not response:
+            await ctx.reply("No game found with that ID", ephemeral=True)
+            return
+        else:
+            game : Game = response[0]
+            embed = self.gameEmbed(game)
+            view = self.GameView(game=game)
+            await ctx.send(embed=embed, view=view)
 
     def gameEmbed(self, gameid: int, name: str, teamtype: str, teamcount: int, autoprogress: bool):
         embed = discord.Embed(
@@ -73,18 +123,28 @@ class GamesCog(commands.Cog):
         embed.add_field(name="Autoprogress", value=f"{autoprogress}")
         return embed
     
-    def gameEmbed(self, game: Game):
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            await ctx.send(f"Invalid argument provided: {error}")
+        else:
+            # Handle other types of errors or re-raise them
+            raise error
+    
+    @staticmethod
+    def gameEmbed(game: Game):
         embed = discord.Embed(
             title=game.name,
             description=f"**ID** {game.gameid}",
             color=discord.Color.blurple()
         )
-        embed.add_field(name="Team Types", value=f"{game.teamtype}: {self.teamtypedescriptions[game.teamtype]}")
+        embed.add_field(name="Team Types", value=f"{game.teamtype}: {GamesCog.teamtypedescriptions[game.teamtype]}")
         embed.add_field(name="Team Count", value=f"{game.teamcount} teams")
         embed.add_field(name="Autoprogress", value=f"{game.autoprogress}")
         return embed
     
-    def gamesEmbed(self, games: list[Game], user):
+    @staticmethod
+    def gamesEmbed(games: list[Game], user):
         embed = discord.Embed(
             title=f"{user.display_name}'s Games",
             color=discord.Color.blurple()
@@ -93,6 +153,58 @@ class GamesCog(commands.Cog):
             embed.add_field(name=game.name,value=game.gameid)
         
         return embed
+    
+    class GameView(discord.ui.View):
+        
+        def __init__(self, *, game:Game, timeout = 180):
+            self.game = game
+            super().__init__(timeout=timeout)
+
+        @discord.ui.button(label="Edit",style=discord.ButtonStyle.success)
+        async def test_callback(self,interaction: discord.Interaction,button: discord.ui.Button):
+            modal = self.GameModal(self.game)
+            await interaction.response.send_modal(modal)
+
+        class GameModal(discord.ui.Modal):
+            def __init__(self,game :Game):
+                self.game = game
+                self.name=discord.ui.TextInput(label="Name",style=discord.TextStyle.short,placeholder="Enter New Name...",default=game.name, max_length=50)
+                self.teamtype=discord.ui.TextInput(label="Team Type",style=discord.TextStyle.short,default=game.teamtype)
+                self.teamcount=discord.ui.TextInput(label="Team Count",style=discord.TextStyle.short,placeholder="Enter Amount of Teams",default=game.teamcount)
+                self.auto=discord.ui.TextInput(label="Autoprogress",style=discord.TextStyle.short,placeholder="Enter Text Thing",default=str(game.autoprogress))
+                super().__init__(title=f"Edit Game {game.gameid}",custom_id=str(game.gameid),)
+                self.add_item(self.name)
+                self.add_item(self.teamtype)
+                self.add_item(self.teamcount)
+                self.add_item(self.auto)
+
+            async def on_submit(self, interaction: discord.Interaction):
+                if self.teamtype.value not in GamesCog.teamtypedescriptions.keys():
+                    await interaction.response.send_message("Team Type must be \"district\", \"team\", or \"solo\".")
+                elif self.auto.value != "False" and self.auto.value != "True":
+                    await interaction.response.send_message("Auto Progress must be \"True\" or \"False\".")
+                else:
+                    try:
+                        count = int(self.teamcount.value)
+                        self.game.name = self.name.value
+                        self.game.teamtype = self.teamtype.value
+                        self.game.teamcount = count
+                        self.game.autoprogress = self.auto.value == "True"
+                        bot : commands.Bot = interaction.client
+                        session = bot.session
+                        await session.merge(self.game)
+                        await session.commit()
+
+                        await session.close()
+                        await interaction.response.edit_message(embed=GamesCog.gameEmbed(game=self.game))
+
+                    except ValueError:
+                        await interaction.followup.send("Team Count must be an integer.")
+                        
+                    
+                    
+                    
+                return await super().on_submit(interaction)
+            
 
     
-
