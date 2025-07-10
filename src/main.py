@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import create_database, database_exists
 
+from cogs.contestants import ContestantCog
 from cogs.games import GamesCog
 from schemas import Base
 
@@ -41,6 +42,7 @@ bot = RoyaleBot(command_prefix='+',intents=intents)
 @bot.event
 async def on_ready():  
     await bot.add_cog(GamesCog(bot))
+    await bot.add_cog(ContestantCog(bot))
     print(f'Logged into {bot.user.name}')
 
 
