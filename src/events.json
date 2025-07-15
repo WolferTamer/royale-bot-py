@@ -1,0 +1,30 @@
+[
+    [
+        {
+            "groups":[2,1],
+            "deaths": [[0,1],[0,0]],
+            "message": "group10 and group11 were ambused by group20. group10 was picked off first by an arrow. Then group11 and group20 got into a tussle where group11 was stabbed to death."
+        }
+    ],
+    [
+        {
+            "groups":[2],
+            "deaths":[],
+            "message": "group10 and group11 rested around a campfire."
+        }
+    ],
+    [
+        {
+            "groups":[1],
+            "deaths":[],
+            "message": "group10 laid down in a field of flowers."
+        }
+    ],
+    [
+        {
+            "groups":[1],
+            "deaths":[[0,0]],
+            "message":"group10 fell off of a tree and snapped their neck."
+        }
+    ]
+]
