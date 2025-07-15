@@ -1,3 +1,6 @@
+from random import random
+from typing import List
+from events.event import Event
 import discord
 import logging
 from discord.ext import commands
@@ -10,7 +13,9 @@ from sqlalchemy_utils import create_database, database_exists
 
 from cogs.contestants import ContestantCog
 from cogs.games import GamesCog
+from cogs.play import PlayCog
 from schemas import Base
+import json
 
 load_dotenv()
 
@@ -28,6 +33,62 @@ class RoyaleBot(commands.Bot):
         self.AsyncSessionLocal = sessionmaker(
             self.engine, expire_on_commit=False, class_=AsyncSession
         )
+        try:
+            with open('events.json', 'r') as f:
+                data = json.load(f)
+            self.events = [] 
+            self.fightevents = [] #events where 2+ groups fight eachother
+            self.groupevents = [] #events where 1 group doesn't fight
+            self.soloevents = [] #events where an individual does something
+            self.deathevents = [] #events where an individual dies alone
+            for i in range(0,len(data)):
+                cat = data[i]
+                for eventdata in cat:
+                    event = Event(eventdata["message"],eventdata["groups"],[tuple(t) for t in eventdata["deaths"]])
+                    self.events.append(event)
+                    match i:
+                        case 0: self.fightevents.append(event)
+                        case 1: self.groupevents.append(event)
+                        case 2: self.soloevents.append(event)
+                        case 3: self.deathevents.append(event)
+
+        except FileNotFoundError:
+            print("Error: 'events.json' not found. Please ensure the file exists in the correct directory.")
+        except json.JSONDecodeError:
+            print("Error: Invalid JSON format in 'events.json'.")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
+    def get_any_event(self):
+        rand = int(random()*len(self.events))
+        return self.events[rand]
+    
+    def get_event_of_type(self, type : str):
+        l = self.get_type_array(type)
+        rand = int(random()*len(l))
+        return l[rand]
+    
+    def get_event_filter(self, type : str = "none", max_groups: List[int] = [], max_deaths: int = 99):
+        l = self.get_type_array(type)
+        def matches(e : Event):
+            for g in range(0,len(e.groups)):
+                if(len(max_groups) > g and e.groups[g] > max_groups[g]) :
+                    return False
+                
+            if max_deaths < len(e.dead):
+                return False
+            return True
+        filtered = list(filter(matches, l))
+        rand = int(random()*len(filtered))
+        return filtered[rand]
+
+    def get_type_array(self, type : str):
+        match type:
+            case "fight": return self.fightevents
+            case "group": return self.groupevents
+            case "solo": return self.soloevents
+            case "death": return self.deathevents
+        return self.events
 
     async def setup_hook(self):
         async with self.engine.begin() as conn:
@@ -43,6 +104,7 @@ bot = RoyaleBot(command_prefix='+',intents=intents)
 async def on_ready():  
     await bot.add_cog(GamesCog(bot))
     await bot.add_cog(ContestantCog(bot))
+    await bot.add_cog(PlayCog(bot))
     print(f'Logged into {bot.user.name}')
 
 
