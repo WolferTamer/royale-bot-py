@@ -1,5 +1,6 @@
 from random import random
 from typing import List
+from cogs.help import HelpCog
 from events.event import Event
 import discord
 import logging
@@ -98,13 +99,14 @@ class RoyaleBot(commands.Bot):
     def session(self) -> AsyncSession:
         return self.AsyncSessionLocal()
 
-bot = RoyaleBot(command_prefix='+',intents=intents)
+bot = RoyaleBot(command_prefix='+',intents=intents, help_command=None)
 
 @bot.event
 async def on_ready():  
     await bot.add_cog(GamesCog(bot))
     await bot.add_cog(ContestantCog(bot))
     await bot.add_cog(PlayCog(bot))
+    await bot.add_cog(HelpCog(bot))
     print(f'Logged into {bot.user.name}')
 
 

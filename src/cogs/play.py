@@ -9,6 +9,7 @@ from schemas import Contestant
 
 
 class PlayCog(commands.Cog):
+
     def __init__(self,bot: commands.Bot):
         self.bot = bot
 
@@ -78,3 +79,9 @@ class PlayCog(commands.Cog):
         await ctx.send(file=f)
         os.remove(f.filename)
         return
+    
+    #/play logic:
+    #Start by getting a list of all the players. Respond with a message showing a desciption of the game &
+    #confirming it is the correct game.
+    #If confirmed, send out the initial events. It will either be sent out one event at a time, or have each day's
+    #Events in one message. 

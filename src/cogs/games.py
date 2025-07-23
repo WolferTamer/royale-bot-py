@@ -7,13 +7,13 @@ from schemas import Game, User
 
 
 class GamesCog(commands.Cog):
-    help_index = [
-        {"name":"Create Game",
+    help_index = {
+        "create_game":{"name":"Create Game",
          "command":"/create_game <name> [teamtype] [teams] [autoprogress]",
          "parameters": [
             {"name":"Name",
              "type":"String",
-             "usage":"The you want your game to have."},
+             "usage":"The name you want your game to have."},
              {"name":"Team Type",
              "type":"district | team | solo",
              "usage":"What type of team you want to have."},
@@ -25,12 +25,12 @@ class GamesCog(commands.Cog):
              "usage":"Whether the game should progress automatically when started."}
          ],
          "description":"Create a game"},
-         {"name":"games",
+         "games":{"name":"games",
          "command":"/games",
          "parameters": [
          ],
          "description":"View a list of your games and their IDs"},
-         {"name":"Game",
+         "game":{"name":"Game",
          "command":"/game <id>",
          "parameters": [
             {"name":"Game ID",
@@ -38,7 +38,7 @@ class GamesCog(commands.Cog):
              "usage":"The id of the game you want to view"}
          ],
          "description":"View information about one of your games"}
-    ]
+    }
 
     teamtypedescriptions = {
         "district": "Each player starts on a team that they may be more inclined to cooperate with, but there will only be one winner.",

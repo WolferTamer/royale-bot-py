@@ -12,7 +12,41 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from schemas import Contestant, Game
 
 class ContestantCog(commands.Cog):
-    
+    help_index = {
+        "add_contestant user":{"name":"Add User Contestant",
+         "command":"/add_contestant user <user> <gameid>",
+         "parameters": [
+            {"name":"User",
+             "type":"User",
+             "usage":"The user you want to use the image & name of for this contestant."},
+             {"name":"Game ID",
+             "type":"Integer",
+             "usage":"The ID of the game you want to add this contestant to."}
+         ],
+         "description":"Add a user as a contestant to one of your games."},
+         "add_contestant custom":{"name":"Add Custom Contestant",
+         "command":"/add_contestant custom <name> <imageurl> <gameid>",
+         "parameters": [
+            {"name":"Name",
+             "type":"String",
+             "usage":"The name of your custom contestant."},
+            {"name":"Image URL",
+             "type":"String",
+             "usage":"The URL to the image you want to use for this contestant."},
+             {"name":"Game ID",
+             "type":"Integer",
+             "usage":"The ID of the game you want to add this contestant to."}
+         ],
+         "description":"Add a custom made contestant to one of your games."},
+         "contestants":{"name":"Contestants",
+         "command":"/contestants <gameid>",
+         "parameters": [
+            {"name":"Game ID",
+             "type":"Integer",
+             "usage":"The id of the game you want to view the contestants of."}
+         ],
+         "description":"View a list of contestants in your game."}
+    }
 
     def __init__(self,bot : commands.Bot):
         self.bot = bot
